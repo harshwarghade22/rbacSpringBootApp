@@ -22,7 +22,7 @@ public class TransactionSchedulerService {
     private static final int PAGE_SIZE = 5000; // Safe for large datasets
 
     // Runs every day at 9:00 AM IST
-    @Scheduled(cron = "0 0 9 * * *")
+    // @Scheduled(cron = "0 */1 * * * *")
     public void fetchDailyTransactions() {
 
         log.info("CRON STARTED: Fetching transactions at {}", LocalDateTime.now());

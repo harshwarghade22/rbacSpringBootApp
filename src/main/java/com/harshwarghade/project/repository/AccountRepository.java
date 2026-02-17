@@ -14,5 +14,7 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
     // 🔥 Optimized for admin view (fetch user with account)
     @Query("SELECT a FROM Account a JOIN FETCH a.user")
     List<Account> findAllWithUser();
+
+    Account findByAccountNumber(String accountNumber);
 }
 

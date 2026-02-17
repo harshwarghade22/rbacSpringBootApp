@@ -12,4 +12,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     List<Transaction> findByAccountId(Long accountId);
 
     Page<Transaction> findByAccountId(Long accountId, org.springframework.data.domain.Pageable pageable);
+
+    Page<Transaction> findAll(org.springframework.data.domain.Pageable pageable);
 }
+    

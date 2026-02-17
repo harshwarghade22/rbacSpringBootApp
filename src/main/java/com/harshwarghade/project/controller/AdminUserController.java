@@ -1,5 +1,6 @@
 package com.harshwarghade.project.controller;
 
+import com.harshwarghade.project.dto.UserDto;
 import com.harshwarghade.project.entity.User;
 import com.harshwarghade.project.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -18,19 +19,19 @@ public class AdminUserController {
     // Only ADMIN can access
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public List<User> getAllUsers() {
+    public List<UserDto> getAllUsers() {
         return userService.getAllUsers();
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public User getUserById(@PathVariable Long id) {
+    public UserDto getUserById(@PathVariable Long id) {
         return userService.getUserById(id);
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public User updateUser(@PathVariable Long id, @RequestBody User user) {
+    public UserDto updateUser(@PathVariable Long id, @RequestBody User user) {
         return userService.updateUser(id, user);
     }
 

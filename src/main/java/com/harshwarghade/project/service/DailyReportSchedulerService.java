@@ -21,7 +21,7 @@ public class DailyReportSchedulerService {
 
     // Runs every day at 9:00 AM IST
     // @Scheduled(cron = "0 0 9 * * *")
-    @Scheduled(cron = "0 */1 * * * *") // Every 1 minute
+    // @Scheduled(cron = "0 */1 * * * *") // Every 1 minute
     @Async
     public void generateDailyTransactionReports() {
 

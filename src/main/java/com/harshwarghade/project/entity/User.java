@@ -1,5 +1,6 @@
 package com.harshwarghade.project.entity;
 
+import java.io.Serializable;
 import java.util.List;
 import java.util.Set;
 
@@ -14,11 +15,11 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "users")
-public class User {
+public class User implements Serializable{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
+    private static final long serialVersionUID = 1L;
     private String name;
 
     @Column(unique = true)
@@ -32,6 +33,7 @@ public class User {
 
     @JsonManagedReference
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    
     private List<Account> accounts;
 
 }
