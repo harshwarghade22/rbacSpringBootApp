@@ -10,4 +10,5 @@ public class BankTxn {
     private LocalDateTime timestamp;
     private String type;
     private Long accountId;
+    private String accountNumber;  
 }

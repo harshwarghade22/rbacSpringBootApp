@@ -25,14 +25,14 @@ public class AccountController {
     @PreAuthorize("hasAnyRole('USER','ADMIN')")
     public Account createMyAccount(
             @RequestParam AccountType type,
-            Authentication authentication) {
+            Authentication authentication,String accountNumber) {
 
         String email = authentication.getName();
 
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        return accountService.createAccountForUser(user, type);
+        return accountService.createAccountForUser(user, type,accountNumber);
     }
 
     // USER views only their accounts

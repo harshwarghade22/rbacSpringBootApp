@@ -9,6 +9,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.http.ResponseEntity;
 
 import java.util.concurrent.*;
@@ -21,20 +22,19 @@ public class BankMigrationService {
 
     private final RestTemplate restTemplate;
     private final JdbcTemplate jdbcTemplate;
+    private final WebClient webClient;
 
-    private static final String BANK_API_URL =
-            "http://localhost:8081/api/bank/transactions?page=%d&size=%d";
+    private static final String BANK_API_URL = "http://localhost:8081/api/bank/transactions?page=%d&size=%d";
 
     // 🔥 Optimized for local machine + large dataset
-    private static final int PAGE_SIZE = 20000;   // reduces API calls drastically
-    private static final int BATCH_SIZE = 5000;   // optimal JDBC batch for MySQL
-    private static final int THREAD_COUNT = 8;    // safe default for local CPU
+    private static final int PAGE_SIZE = 10000; // reduces API calls drastically
+    private static final int BATCH_SIZE = 5000; // optimal JDBC batch for MySQL
+    private static final int THREAD_COUNT = 8; // safe default for local CPU , next 8 threads
 
     // Restart-safe (skips duplicates due to UNIQUE source_txn_id)
-    private static final String INSERT_SQL =
-            "INSERT IGNORE INTO transactions_copy " +
-            "(amount, timestamp, type, account_id, source_txn_id) " +
-            "VALUES (?, ?, ?, ?, ?)";
+    private static final String INSERT_SQL = "INSERT IGNORE INTO transactions_copy " +
+            "(amount, timestamp, type, account_id,account_number, source_txn_id) " +
+            "VALUES (?, ?, ?, ?, ?, ?)";
 
     public void migrateAllTransactions() throws InterruptedException {
 
@@ -88,6 +88,45 @@ public class BankMigrationService {
         }
     }
 
+    // private void processPage(int page, AtomicLong totalMigrated) {
+
+    // long pageStart = System.currentTimeMillis();
+
+    // PageResponse<BankTxn> pageData = fetchPage(page);
+
+    // if (pageData == null || pageData.getContent() == null ||
+    // pageData.getContent().isEmpty()) {
+    // log.warn("Page {} returned empty data.", page);
+    // return;
+    // }
+
+    // var transactions = pageData.getContent();
+
+    // // 🔥 Ultra-fast JDBC batch insert (no Hibernate overhead)
+    // jdbcTemplate.batchUpdate(
+    // INSERT_SQL,
+    // transactions,
+    // BATCH_SIZE,
+    // (ps, txn) -> {
+    // ps.setDouble(1, txn.getAmount());
+    // ps.setObject(2, txn.getTimestamp());
+    // ps.setString(3, txn.getType());
+    // ps.setLong(4, txn.getAccountId());
+    // ps.setLong(5, txn.getId()); // source_txn_id for dedup safety
+    // }
+    // );
+
+    // long migrated = totalMigrated.addAndGet(transactions.size());
+    // long pageTimeSec = (System.currentTimeMillis() - pageStart) / 1000;
+
+    // // Reduce logging overhead (log every 10 pages)
+    // if (page % 10 == 0) {
+    // log.info("Page {} done | Records: {} | Page Time: {} sec | Total Migrated:
+    // {}",
+    // page, transactions.size(), pageTimeSec, migrated);
+    // }
+    // }
+
     private void processPage(int page, AtomicLong totalMigrated) {
 
         long pageStart = System.currentTimeMillis();
@@ -101,7 +140,6 @@ public class BankMigrationService {
 
         var transactions = pageData.getContent();
 
-        // 🔥 Ultra-fast JDBC batch insert (no Hibernate overhead)
         jdbcTemplate.batchUpdate(
                 INSERT_SQL,
                 transactions,
@@ -110,15 +148,20 @@ public class BankMigrationService {
                     ps.setDouble(1, txn.getAmount());
                     ps.setObject(2, txn.getTimestamp());
                     ps.setString(3, txn.getType());
-                    ps.setLong(4, txn.getAccountId());
-                    ps.setLong(5, txn.getId()); // source_txn_id for dedup safety
-                }
-        );
+                    // ps.setLong(4, txn.getAccountId()); // existing FK
+                    if (txn.getAccountId() != null) {
+                        ps.setLong(4, txn.getAccountId());
+                    } else {
+                        ps.setNull(4, java.sql.Types.BIGINT);
+                        log.warn("Skipping txn {} due to NULL accountId", txn.getId());
+                    }
+                    ps.setString(5, txn.getAccountNumber()); // 🔥 NEW FIELD
+                    ps.setLong(6, txn.getId()); // source_txn_id (dedup)
+                });
 
         long migrated = totalMigrated.addAndGet(transactions.size());
         long pageTimeSec = (System.currentTimeMillis() - pageStart) / 1000;
 
-        // Reduce logging overhead (log every 10 pages)
         if (page % 10 == 0) {
             log.info("Page {} done | Records: {} | Page Time: {} sec | Total Migrated: {}",
                     page, transactions.size(), pageTimeSec, migrated);
@@ -126,16 +169,21 @@ public class BankMigrationService {
     }
 
     private PageResponse<BankTxn> fetchPage(int page) {
-        String url = String.format(BANK_API_URL, page, PAGE_SIZE);
-
-        ResponseEntity<PageResponse<BankTxn>> response =
-                restTemplate.exchange(
-                        url,
-                        HttpMethod.GET,
-                        null,
-                        new ParameterizedTypeReference<PageResponse<BankTxn>>() {}
-                );
-
-        return response.getBody();
+        try {
+            return webClient.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/api/bank/transactions")
+                            .queryParam("page", page)
+                            .queryParam("size", PAGE_SIZE)
+                            .build())
+                    .retrieve()
+                    .bodyToMono(new ParameterizedTypeReference<PageResponse<BankTxn>>() {
+                    })
+                    .block();
+        } catch (Exception e) {
+            log.error("Failed to fetch page {}", page, e);
+            return null;
+        }
     }
+
 }

@@ -20,10 +20,10 @@ public class AccountService {
     private final UserRepository userRepository;
 
     // USER creates their own account
-    public Account createAccountForUser(User user, AccountType type) {
+    public Account createAccountForUser(User user, AccountType type,String accountNumber) {
 
         Account account = new Account();
-        account.setAccountNumber(generateAccountNumber());
+        account.setAccountNumber(accountNumber);
         account.setAccountType(type);
         account.setBalance(0.0);
         account.setUser(user);

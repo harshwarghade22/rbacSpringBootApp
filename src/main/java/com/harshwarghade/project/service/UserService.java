@@ -10,6 +10,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -21,7 +22,6 @@ public class UserService {
     @Cacheable(value = "users")
     public List<UserDto> getAllUsers() {
         System.out.println("Fetching users from DATABASE...");
-
         return userRepository.findAll()
                 .stream()
                 .map(user -> new UserDto(
