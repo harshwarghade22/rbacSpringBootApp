@@ -12,4 +12,5 @@ import lombok.Data;
 public class AuthResponseDto {
     private String token;
     private Set<String> roles;
+    private String name;
 }

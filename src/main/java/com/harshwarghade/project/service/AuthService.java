@@ -83,7 +83,9 @@ public class AuthService {
             Set<String> roleNames = user.getRoles().stream()
                     .map(r -> r.getRoleName().name())
                     .collect(java.util.stream.Collectors.toSet());
-            return new AuthResponseDto(token, roleNames);
+
+        String name = savedUser.getName();
+            return new AuthResponseDto(token, roleNames, name);
     }
 
     public AuthResponseDto login(AuthRequestDto request) {
@@ -101,6 +103,8 @@ public class AuthService {
             Set<String> roleNames = user.getRoles().stream()
                 .map(r -> r.getRoleName().name())
                 .collect(java.util.stream.Collectors.toSet());
-            return new AuthResponseDto(token, roleNames);
+
+        String name= user.getName();
+            return new AuthResponseDto(token, roleNames, name);
     }
 }
